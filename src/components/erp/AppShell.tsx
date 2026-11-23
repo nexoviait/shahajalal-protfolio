@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   Bell,
@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
+import { BrandEffects, BrandMark } from "@/components/erp/Brand";
+import { usePageMotion } from "@/components/erp/motion";
 import { deriveNotifications, visibleCompanies } from "@/lib/erp/analytics";
 import { COMPANY_NAV, NAV, navLabel, tr } from "@/lib/erp/i18n";
 import { PERIOD_LABELS } from "@/lib/erp/period";
@@ -171,11 +173,35 @@ function GlobalSearch({
   );
 }
 
+function UserSwitcher({ className }: { className?: string }) {
+  const state = useERP();
+  const user = state.collections.users.find((u) => u.id === state.currentUserId);
+  return (
+    <Select value={state.currentUserId} onValueChange={(v) => ui.setUser(v)}>
+      <SelectTrigger
+        className={cn("h-9 w-44", className)}
+        aria-label="Signed-in user (demo role switcher)"
+      >
+        <SelectValue>{user ? String(user.name) : "User"}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {state.collections.users.map((u) => (
+          <SelectItem key={u.id} value={u.id}>
+            {String(u.name)} · {String(u.role)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const state = useERP();
   const role = currentRole(state);
   const { pathname } = useLocation();
   const [mobileNav, setMobileNav] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+  usePageMotion(mainRef, pathname);
   const [searchOpen, setSearchOpen] = useState(false);
   const lang = state.settings.lang;
   const visible = visibleCompanies(state);
@@ -213,7 +239,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const current = moduleFor(pathname);
   const allowed = !current || canView(role, current.id) || pathname.startsWith("/app/company/");
-  const user = state.collections.users.find((u) => u.id === state.currentUserId);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -225,13 +250,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 overflow-y-auto border-r bg-card lg:block print:hidden">
         <Link to="/" className="flex h-16 items-center gap-2 border-b px-5">
-          <span className="grid size-8 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-            b
-          </span>
-          <span className="text-sm font-semibold leading-tight">
-            b Group
-            <span className="block text-[11px] font-normal text-muted-foreground">
-              Enterprise operating system
+          <BrandMark />
+          <span className="min-w-0 text-sm font-semibold leading-tight">
+            <span className="block truncate">{state.settings.brandName}</span>
+            <span className="block truncate text-[11px] font-normal text-muted-foreground">
+              {state.settings.brandTagline}
             </span>
           </span>
         </Link>
@@ -240,83 +263,110 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <Sheet open={mobileNav} onOpenChange={setMobileNav}>
         <SheetContent side="left" className="w-72 overflow-y-auto p-0">
-          <SheetHeader className="border-b p-4">
-            <SheetTitle>b Group</SheetTitle>
+          <SheetHeader className="border-b p-4 text-left">
+            <SheetTitle>{state.settings.brandName}</SheetTitle>
           </SheetHeader>
           <SidebarNav onNavigate={() => setMobileNav(false)} />
+          <div className="border-t p-3">
+            <p className="mb-1.5 text-xs text-muted-foreground">
+              Signed in as (demo role switcher)
+            </p>
+            <UserSwitcher className="w-full" />
+          </div>
         </SheetContent>
       </Sheet>
 
       <div className="lg:pl-64 print:pl-0">
-        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b bg-background/95 px-4 py-2.5 backdrop-blur print:hidden">
+        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-x-2 gap-y-2 border-b bg-background/95 px-3 py-2.5 backdrop-blur sm:px-4 print:hidden">
           <Button
             variant="outline"
             size="icon"
-            className="lg:hidden"
+            className="size-9 lg:hidden"
             onClick={() => setMobileNav(true)}
             aria-label="Open menu"
           >
             <Menu className="size-4" />
           </Button>
-          <div className="flex items-center gap-2">
-            <Building2 className="hidden size-4 text-muted-foreground sm:block" aria-hidden />
-            <Select value={state.activeCompanyId} onValueChange={(v) => ui.setActiveCompany(v)}>
-              <SelectTrigger className="h-9 w-48" aria-label="Company switcher">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {visible.length > 1 ? (
-                  <SelectItem value="all">{tr(lang, "allCompanies")}</SelectItem>
-                ) : null}
-                {visible.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <CalendarRange className="hidden size-4 text-muted-foreground sm:block" aria-hidden />
-            <Select value={state.period} onValueChange={(v) => ui.setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="h-9 w-40" aria-label="Date range">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIODS.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {PERIOD_LABELS[p]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold lg:hidden">
+            {state.settings.brandName}
+          </span>
+
+          {/* Filters: full-width second row on small screens, inline on large ones. */}
+          <div className="order-last grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:order-none lg:w-auto">
+            <div className="flex min-w-0 items-center gap-2">
+              <Building2
+                className="hidden size-4 shrink-0 text-muted-foreground sm:block"
+                aria-hidden
+              />
+              <Select value={state.activeCompanyId} onValueChange={(v) => ui.setActiveCompany(v)}>
+                <SelectTrigger className="h-9 w-full min-w-0 sm:w-48" aria-label="Company switcher">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {visible.length > 1 ? (
+                    <SelectItem value="all">{tr(lang, "allCompanies")}</SelectItem>
+                  ) : null}
+                  {visible.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <CalendarRange
+                className="hidden size-4 shrink-0 text-muted-foreground sm:block"
+                aria-hidden
+              />
+              <Select value={state.period} onValueChange={(v) => ui.setPeriod(v as PeriodKey)}>
+                <SelectTrigger className="h-9 w-full min-w-0 sm:w-40" aria-label="Date range">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERIODS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {PERIOD_LABELS[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {state.period === "custom" ? (
-              <div className="flex items-center gap-1">
+              <div className="col-span-2 grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-1">
                 <Input
                   type="date"
                   aria-label="From date"
-                  className="h-9 w-36"
+                  className="h-9 sm:w-36"
                   value={state.customFrom}
                   onChange={(e) => ui.setCustomRange(e.target.value, state.customTo)}
                 />
                 <Input
                   type="date"
                   aria-label="To date"
-                  className="h-9 w-36"
+                  className="h-9 sm:w-36"
                   value={state.customTo}
                   onChange={(e) => ui.setCustomRange(state.customFrom, e.target.value)}
                 />
               </div>
             ) : null}
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
-            <Button variant="outline" size="sm" onClick={() => setSearchOpen(true)}>
+
+          <div className="flex items-center gap-1.5 lg:ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+            >
               <Search className="size-4" />
               <span className="hidden sm:inline">{tr(lang, "search")}</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
+              className="h-9"
               onClick={() => ui.setSettings({ lang: lang === "en" ? "bn" : "en" })}
               aria-label="Switch language"
             >
@@ -347,21 +397,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ) : null}
               </Link>
             </Button>
-            <Select value={state.currentUserId} onValueChange={(v) => ui.setUser(v)}>
-              <SelectTrigger className="h-9 w-44" aria-label="Signed-in user (demo role switcher)">
-                <SelectValue>{user ? `${String(user.name)}` : "User"}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {state.collections.users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {String(u.name)} · {String(u.role)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="hidden lg:block">
+              <UserSwitcher />
+            </div>
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-[1400px] p-4 sm:p-6">
+        <main ref={mainRef} id="main" className="mx-auto w-full max-w-[1400px] p-4 sm:p-6">
           {allowed ? (
             children
           ) : (
@@ -377,6 +418,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      <BrandEffects />
       <Toaster />
     </div>
   );

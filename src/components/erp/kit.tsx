@@ -16,7 +16,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div data-anim="header" className="mb-6 flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description ? (
@@ -44,7 +44,10 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-lg border bg-card p-5 shadow-sm", className)}>
+    <section
+      data-anim="card"
+      className={cn("min-w-0 rounded-lg border bg-card p-5 shadow-sm", className)}
+    >
       {title || actions ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -81,12 +84,17 @@ export function Stat({
           ? "text-chart-2"
           : "text-foreground";
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
+    <div data-anim="card" className="min-w-0 rounded-lg border bg-card p-4 shadow-sm">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 truncate font-mono text-xl font-semibold tabular-nums", color)}>
+      <p
+        className={cn(
+          "mt-1 truncate font-mono text-base font-semibold tabular-nums sm:text-xl",
+          color,
+        )}
+      >
         {value}
       </p>
-      {hint ? <p className="mt-1 truncate text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="mt-1 break-words text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

@@ -33,6 +33,7 @@ const FIELDS: FieldDef[] = [
   { key: "registrationCost", label: "Registration cost", type: "money", table: false },
   {
     key: "mutationStatus",
+    extensible: false,
     label: "Mutation status",
     type: "select",
     options: ["Not Started", "In Progress", "Completed"],

@@ -23,6 +23,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ExportMenu, PageHeader, StatusPill, Empty } from "@/components/erp/kit";
+import { OptionSelect } from "@/components/erp/OptionSelect";
+import { useListOptions } from "@/components/erp/useListOptions";
 import { scoped } from "@/lib/erp/analytics";
 import { money } from "@/lib/erp/format";
 import { canEdit, type ModuleId } from "@/lib/erp/rbac";
@@ -43,6 +45,8 @@ export type FieldDef = {
   /** Show in the table (default true for the first 6 fields). */
   table?: boolean;
   span?: 1 | 2;
+  /** Select fields can be extended on demand unless the values drive logic (set false). */
+  extensible?: boolean;
   /** Heading rendered above this field in the form. */
   section?: string;
   placeholder?: string;
@@ -88,6 +92,35 @@ function display(field: FieldDef, row: Row): ReactNode {
     default:
       return String(v);
   }
+}
+
+function SelectField({
+  id,
+  listId,
+  field,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  listId: string;
+  field: FieldDef;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean | undefined;
+}) {
+  const { options, onCreate } = useListOptions(listId, field.options ?? []);
+  return (
+    <OptionSelect
+      id={id}
+      value={value}
+      onChange={onChange}
+      options={options}
+      onCreate={field.extensible === false ? undefined : onCreate}
+      noun={field.label.toLowerCase()}
+      disabled={disabled}
+    />
+  );
 }
 
 export function DataModule(props: DataModuleProps) {
@@ -207,7 +240,7 @@ export function DataModule(props: DataModuleProps) {
       />
       {props.summary ? props.summary(rows) : null}
 
-      <div className="rounded-lg border bg-card shadow-sm">
+      <div data-anim="card" className="rounded-lg border bg-card shadow-sm">
         <div className="flex items-center gap-2 border-b p-3 print:hidden">
           <Search className="size-4 text-muted-foreground" aria-hidden />
           <Input
@@ -238,6 +271,7 @@ export function DataModule(props: DataModuleProps) {
                 {rows.map((r) => (
                   <tr
                     key={r.id}
+                    data-anim="row"
                     tabIndex={0}
                     className="cursor-pointer hover:bg-muted/40 focus:bg-muted/40 focus:outline-none"
                     onClick={() => {
@@ -274,8 +308,8 @@ export function DataModule(props: DataModuleProps) {
       </div>
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b px-6 py-4">
             <DialogTitle>
               {isNew ? "New" : editable ? "Edit" : "View"} {props.noun.toLowerCase()}
             </DialogTitle>
@@ -286,7 +320,7 @@ export function DataModule(props: DataModuleProps) {
             </DialogDescription>
           </DialogHeader>
           {editing ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
               {companyScoped ? (
                 <div className="grid gap-1.5 sm:col-span-2">
                   <Label>Company</Label>
@@ -327,22 +361,14 @@ export function DataModule(props: DataModuleProps) {
                         {f.required ? <span className="text-destructive"> *</span> : null}
                       </Label>
                       {f.type === "select" ? (
-                        <Select
+                        <SelectField
+                          id={id}
+                          listId={`${props.collection}.${f.key}`}
+                          field={f}
                           value={String(v ?? "")}
-                          onValueChange={(val) => setField(f.key, val)}
+                          onChange={(val) => setField(f.key, val)}
                           disabled={disabled}
-                        >
-                          <SelectTrigger id={id}>
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(f.options ?? []).map((o) => (
-                              <SelectItem key={o} value={o}>
-                                {o}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        />
                       ) : f.type === "textarea" ? (
                         <Textarea
                           id={id}
@@ -402,7 +428,7 @@ export function DataModule(props: DataModuleProps) {
               ) : null}
             </div>
           ) : null}
-          <DialogFooter className="gap-2 sm:justify-between">
+          <DialogFooter className="gap-2 border-t px-6 py-4 sm:justify-between">
             <div>
               {editable && !isNew && canDeleteRow ? (
                 <Button variant="outline" onClick={remove} className="text-destructive">

@@ -10,6 +10,29 @@ import { assetPurchaseEntry, mkEntry, payrollEntry, pendingDepreciation } from "
 import { seedOperations } from "./seed-operations";
 
 export const STATE_VERSION = 1;
+
+export const DEFAULT_SETTINGS: AppState["settings"] = {
+  lang: "en",
+  theme: "light",
+  lowCashThreshold: 1_500_000,
+  approvalLimits: [
+    { upTo: 100_000, levels: 1 },
+    { upTo: 2_000_000, levels: 2 },
+    { upTo: Number.MAX_SAFE_INTEGER, levels: 3 },
+  ],
+  documentExpiryDays: 60,
+  emailAlerts: ["Daily Report Missing", "Document Expiry", "Low Cash Balance"],
+  alertEmail: "",
+  brandName: "b Group",
+  brandTagline: "Enterprise operating system",
+  logoDataUrl: "",
+  faviconDataUrl: "",
+  customOptions: {},
+  customAccounts: [],
+  heroTitle: "Run a portfolio of companies without being in every office.",
+  heroText:
+    "b Group gives the Group Owner a single dashboard over every company: daily operations, finances, assets, people, land, investments and new ventures, with individual accountability and complete financial control.",
+};
 export const OWNER_ID = "u-owner";
 
 export const COMPANY_IDS = {
@@ -610,17 +633,8 @@ export function buildSeed(ref: Date = new Date()): AppState {
       },
     ],
     settings: {
-      lang: "en",
-      theme: "light",
-      lowCashThreshold: 1_500_000,
-      approvalLimits: [
-        { upTo: 100_000, levels: 1 },
-        { upTo: 2_000_000, levels: 2 },
-        { upTo: Number.MAX_SAFE_INTEGER, levels: 3 },
-      ],
-      documentExpiryDays: 60,
-      emailAlerts: ["Daily Report Missing", "Document Expiry", "Low Cash Balance"],
-      alertEmail: "",
+      ...DEFAULT_SETTINGS,
+      approvalLimits: DEFAULT_SETTINGS.approvalLimits.map((l) => ({ ...l })),
     },
     activeCompanyId: "all",
     period: "month",

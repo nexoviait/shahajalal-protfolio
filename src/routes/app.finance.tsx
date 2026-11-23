@@ -43,7 +43,8 @@ import {
 import { inRange } from "@/lib/erp/period";
 import { isoDate, money } from "@/lib/erp/format";
 import { canEdit } from "@/lib/erp/rbac";
-import { currentRole, ledger } from "@/lib/erp/store";
+import { OptionSelect } from "@/components/erp/OptionSelect";
+import { currentRole, ledger, ui } from "@/lib/erp/store";
 import type { JournalLine } from "@/lib/erp/types";
 
 export const Route = createFileRoute("/app/finance")({
@@ -161,18 +162,14 @@ function Transactions() {
             </div>
             <div className="grid gap-1.5">
               <Label>Category</Label>
-              <Select value={account} onValueChange={setAccount}>
-                <SelectTrigger aria-label="Category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.code} value={a.code}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OptionSelect
+                ariaLabel="Category"
+                value={account}
+                onChange={setAccount}
+                options={accounts.map((a) => ({ value: a.code, label: a.name }))}
+                onCreate={(name) => ui.addAccount(kind, name)}
+                noun={kind === "income" ? "income category" : "expense category"}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="tx-amount">Amount (BDT)</Label>
@@ -202,18 +199,17 @@ function Transactions() {
             {mode === "bank" ? (
               <div className="grid gap-1.5">
                 <Label>Bank account</Label>
-                <Select value={bank} onValueChange={setBank}>
-                  <SelectTrigger aria-label="Bank account">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BANK_CODES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {ACCOUNT_BY_CODE[c]?.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OptionSelect
+                  ariaLabel="Bank account"
+                  value={bank}
+                  onChange={setBank}
+                  options={BANK_CODES.map((c) => ({
+                    value: c,
+                    label: ACCOUNT_BY_CODE[c]?.name ?? c,
+                  }))}
+                  onCreate={(name) => ui.addAccount("bank", name)}
+                  noun="bank account"
+                />
               </div>
             ) : null}
             <div className="grid gap-1.5">
@@ -362,9 +358,15 @@ function ManualJournal() {
       </div>
       <div className="space-y-2">
         {lines.map((l, i) => (
-          <div key={i} className="grid grid-cols-[1fr_7rem_7rem_2.5rem] gap-2">
+          <div
+            key={i}
+            className="grid grid-cols-[1fr_1fr_2.5rem] gap-2 rounded-md border p-2 sm:grid-cols-[1fr_7rem_7rem_2.5rem] sm:rounded-none sm:border-0 sm:p-0"
+          >
             <Select value={l.account} onValueChange={(a) => setLine(i, { account: a })}>
-              <SelectTrigger aria-label={`Account line ${i + 1}`}>
+              <SelectTrigger
+                aria-label={`Account line ${i + 1}`}
+                className="col-span-3 min-w-0 sm:col-span-1"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -899,7 +901,7 @@ function Finance() {
         />
       </StatGrid>
       <Tabs defaultValue="transactions">
-        <TabsList className="mb-4 flex h-auto flex-wrap">
+        <TabsList className="mb-4 flex h-auto w-full flex-nowrap justify-start overflow-x-auto [&>*]:shrink-0">
           <TabsTrigger value="transactions">Transactions & journal</TabsTrigger>
           <TabsTrigger value="manual">Manual entry</TabsTrigger>
           <TabsTrigger value="bank">Cash & bank</TabsTrigger>

@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type {
+  Account,
+  AccountType,
   AppState,
   AuditEntry,
   CollectionName,
@@ -16,13 +18,17 @@ import {
   incomeLines,
   intercompanyLoanEntries,
   intercompanyServiceEntries,
+  CHART,
+  nextAccountCode,
+  registerCustomAccounts,
   reverseLines,
+  type NewAccountKind,
   validateLines,
   type PayMode,
 } from "./accounting";
 import { assetPurchaseEntry, payrollEntry, pendingDepreciation } from "./ledger-ops";
-import { buildSeed, STATE_VERSION } from "./seed";
-import { canEdit, type ModuleId } from "./rbac";
+import { DEFAULT_SETTINGS, buildSeed, STATE_VERSION } from "./seed";
+import { canEdit, MODULE_IDS, type ModuleId } from "./rbac";
 import { isoDate, uid } from "./format";
 
 const STORAGE_KEY = "sgos:state:v1";
@@ -47,15 +53,7 @@ const EMPTY: AppState = {
     personal: [],
   },
   audit: [],
-  settings: {
-    lang: "en",
-    theme: "light",
-    lowCashThreshold: 0,
-    approvalLimits: [{ upTo: Number.MAX_SAFE_INTEGER, levels: 1 }],
-    documentExpiryDays: 60,
-    emailAlerts: [],
-    alertEmail: "",
-  },
+  settings: DEFAULT_SETTINGS,
   activeCompanyId: "all",
   period: "month",
   customFrom: "",
@@ -82,10 +80,13 @@ function persist() {
 }
 
 function set(next: AppState) {
+  registerCustomAccounts(next.settings.customAccounts);
   state = next;
   persist();
   emit();
 }
+
+const BUILT_IN_ACCOUNTS = () => CHART.filter((a) => !a.custom);
 
 export type Result = { ok: true; id?: string } | { ok: false; error: string };
 const fail = (error: string): Result => ({ ok: false, error });
@@ -106,12 +107,15 @@ export function hydrate() {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
     if (raw) {
       const parsed = JSON.parse(raw) as AppState;
-      if (parsed.version === STATE_VERSION) next = parsed;
+      // Merge defaults so settings added in newer versions exist on older saved data.
+      if (parsed.version === STATE_VERSION)
+        next = { ...parsed, settings: { ...DEFAULT_SETTINGS, ...parsed.settings } };
     }
   } catch {
     next = null;
   }
   state = next ?? buildSeed(new Date());
+  registerCustomAccounts(state.settings.customAccounts);
   ready = true;
   if (!next) persist();
   emit();
@@ -194,12 +198,124 @@ export const ui = {
     );
   },
   setSettings(patch: Partial<Settings>) {
+    // Long values (uploaded images) are summarised so the audit log stays small.
+    const detail = JSON.stringify(patch, (_k, v: unknown) =>
+      typeof v === "string" && v.length > 120 ? `[${v.length} characters]` : v,
+    );
+    const entry = audit("Settings", "System", detail);
+    const last = state.audit[0];
+    // Merge rapid consecutive edits (typing in a field) into one audit entry.
+    const merge =
+      last?.action === "Settings" &&
+      last.user === entry.user &&
+      Date.parse(entry.at) - Date.parse(last.at) < 10_000;
+    const next = { ...state, settings: { ...state.settings, ...patch } };
+    set(
+      merge
+        ? {
+            ...next,
+            audit: [
+              { ...entry, id: last.id, detail: `${last.detail} ${detail}`.slice(0, 400) },
+              ...state.audit.slice(1),
+            ],
+          }
+        : withAudit(next, entry),
+    );
+  },
+  /** Add a dropdown option on demand. `builtIn` lists the fixed options so duplicates are refused. */
+  addOption(listId: string, value: string, builtIn: string[] = []): Result {
+    const name = value.trim().replace(/\s+/g, " ");
+    if (!name) return fail("Enter a name.");
+    if (name.length > 60) return fail("Keep the name under 60 characters.");
+    if (!MODULE_IDS.some((m) => canEdit(currentRole(), m)))
+      return fail(`Your role (${currentRole()}) cannot add options.`);
+    const current = state.settings.customOptions[listId] ?? [];
+    if ([...builtIn, ...current].some((o) => o.toLowerCase() === name.toLowerCase()))
+      return fail("That option already exists.");
     set(
       withAudit(
-        { ...state, settings: { ...state.settings, ...patch } },
-        audit("Settings", "System", JSON.stringify(patch)),
+        {
+          ...state,
+          settings: {
+            ...state.settings,
+            customOptions: { ...state.settings.customOptions, [listId]: [...current, name] },
+          },
+        },
+        audit("Add option", listId, name),
       ),
     );
+    return { ok: true, id: name };
+  },
+  removeOption(listId: string, value: string): Result {
+    if (!canEdit(currentRole(), "settings"))
+      return fail("Only an administrator can remove options.");
+    const next = (state.settings.customOptions[listId] ?? []).filter((o) => o !== value);
+    const customOptions = { ...state.settings.customOptions };
+    if (next.length) customOptions[listId] = next;
+    else delete customOptions[listId];
+    set(
+      withAudit(
+        { ...state, settings: { ...state.settings, customOptions } },
+        audit("Remove option", listId, value),
+      ),
+    );
+    return { ok: true };
+  },
+  /** Create a ledger account (income category, expense category or bank account) on demand. */
+  addAccount(kind: NewAccountKind, value: string): Result {
+    if (!canEdit(currentRole(), "finance"))
+      return fail(`Your role (${currentRole()}) cannot add accounts.`);
+    const name = value.trim().replace(/\s+/g, " ");
+    if (!name) return fail("Enter a name.");
+    if (name.length > 60) return fail("Keep the name under 60 characters.");
+    const type: AccountType = kind === "bank" ? "asset" : kind;
+    const dupe = [...state.settings.customAccounts, ...BUILT_IN_ACCOUNTS()].some(
+      (a) =>
+        a.type === type &&
+        !!a.bank === (kind === "bank") &&
+        a.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (dupe) return fail("An account with that name already exists.");
+    const code = nextAccountCode(kind);
+    if (!code) return fail("No free account codes are left for this type.");
+    const account: Account = {
+      code,
+      name: kind === "bank" ? `Bank – ${name}` : name,
+      type,
+      ...(kind === "bank" ? { bank: true } : {}),
+    };
+    set(
+      withAudit(
+        {
+          ...state,
+          settings: {
+            ...state.settings,
+            customAccounts: [...state.settings.customAccounts, account],
+          },
+        },
+        audit("Add account", code, account.name),
+      ),
+    );
+    return { ok: true, id: code };
+  },
+  removeAccount(code: string): Result {
+    if (!canEdit(currentRole(), "settings"))
+      return fail("Only an administrator can remove accounts.");
+    if (state.journal.some((e) => e.lines.some((l) => l.account === code)))
+      return fail("This account has ledger entries and cannot be removed.");
+    set(
+      withAudit(
+        {
+          ...state,
+          settings: {
+            ...state.settings,
+            customAccounts: state.settings.customAccounts.filter((a) => a.code !== code),
+          },
+        },
+        audit("Remove account", code, ""),
+      ),
+    );
+    return { ok: true };
   },
   markRead(ids: string[]) {
     set({ ...state, readNotifications: [...new Set([...state.readNotifications, ...ids])] });
@@ -586,7 +702,7 @@ export const system = {
       }
       set(
         withAudit(
-          parsed,
+          { ...parsed, settings: { ...DEFAULT_SETTINGS, ...parsed.settings } },
           audit("Restore backup", "System", `${parsed.journal.length} journal entries`),
         ),
       );
@@ -600,6 +716,7 @@ export const system = {
   },
   /** Test helper: replace the whole state. */
   _replace(next: AppState) {
+    registerCustomAccounts(next.settings.customAccounts);
     state = next;
     ready = true;
     emit();

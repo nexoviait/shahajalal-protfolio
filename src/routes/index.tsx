@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -18,7 +18,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { BrandEffects, BrandMark } from "@/components/erp/Brand";
 import { Button } from "@/components/ui/button";
+import { hydrate, useERP } from "@/lib/erp/store";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
@@ -125,10 +127,16 @@ const STATS: { value: number; suffix: string; label: string }[] = [
 ];
 
 const BARS = [38, 52, 46, 64, 58, 78, 90];
-const HEADLINE = "Run a portfolio of companies without being in every office.".split(" ");
 
 function Landing() {
   const root = useRef<HTMLDivElement>(null);
+  const { settings } = useERP();
+  const headline = settings.heroTitle.split(" ").filter(Boolean);
+
+  // Branding and landing text are edited in System Settings; load them for this public page too.
+  useEffect(() => {
+    hydrate();
+  }, []);
 
   useGSAP(
     () => {
@@ -324,7 +332,7 @@ function Landing() {
 
       return () => mm.revert();
     },
-    { scope: root },
+    { scope: root, dependencies: [settings.heroTitle], revertOnUpdate: true },
   );
 
   return (
@@ -341,10 +349,8 @@ function Landing() {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2 font-semibold">
-            <span className="grid size-8 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-              b
-            </span>
-            b Group
+            <BrandMark />
+            {settings.brandName}
           </Link>
           <nav aria-label="Primary" className="flex items-center gap-1">
             <a
@@ -372,6 +378,7 @@ function Landing() {
         </div>
       </header>
 
+      <BrandEffects />
       <main>
         {/* Hero */}
         <section data-hero className="relative isolate">
@@ -406,7 +413,7 @@ function Landing() {
                 · multiple companies
               </p>
               <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-                {HEADLINE.map((w, i) => (
+                {headline.map((w, i) => (
                   <span
                     key={i}
                     className="mr-[0.25em] inline-block overflow-hidden pb-1 align-bottom"
@@ -418,18 +425,16 @@ function Landing() {
                 ))}
               </h1>
               <p data-hero-copy className="mt-6 max-w-xl text-lg text-muted-foreground">
-                b Group gives the Group Owner a single dashboard over every company: daily
-                operations, finances, assets, people, land, investments and new ventures, with
-                individual accountability and complete financial control.
+                {settings.heroText}
               </p>
               <div data-hero-cta className="mt-8 flex flex-wrap gap-3">
-                <Button asChild size="lg" className="group">
+                <Button asChild size="lg" className="group w-full sm:w-auto">
                   <Link to="/app">
                     Open the portal{" "}
                     <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline">
+                <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
                   <a href="#features">See what it manages</a>
                 </Button>
               </div>
@@ -647,7 +652,9 @@ function Landing() {
 
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs text-muted-foreground sm:px-6">
-          <span>© {new Date().getFullYear()} b Group</span>
+          <span>
+            © {new Date().getFullYear()} {settings.brandName}
+          </span>
           <span>ONE OWNER · ONE CENTRAL PORTAL · MULTIPLE COMPANIES</span>
         </div>
       </footer>

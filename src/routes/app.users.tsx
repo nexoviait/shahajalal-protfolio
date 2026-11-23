@@ -23,7 +23,7 @@ export const Route = createFileRoute("/app/users")({
 const FIELDS: FieldDef[] = [
   { key: "name", label: "Full name", required: true },
   { key: "email", label: "Email (unique login)", required: true },
-  { key: "role", label: "Role", type: "select", options: ROLES },
+  { key: "role", extensible: false, label: "Role", type: "select", options: ROLES },
   {
     key: "companyIds",
     label: "Assigned companies (all, or comma-separated company IDs)",
@@ -33,6 +33,7 @@ const FIELDS: FieldDef[] = [
   { key: "twoFactor", label: "Two-factor authentication", type: "boolean" },
   {
     key: "status",
+    extensible: false,
     label: "Status",
     type: "select",
     options: ["Active", "Disabled"],

@@ -41,6 +41,7 @@ const FIELDS: FieldDef[] = [
   { key: "progress", label: "Progress %", type: "percent" },
   {
     key: "status",
+    extensible: false,
     label: "Status",
     type: "select",
     options: STATUSES,

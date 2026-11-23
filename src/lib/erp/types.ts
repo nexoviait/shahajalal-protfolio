@@ -55,6 +55,10 @@ export type Account = {
   type: AccountType;
   /** Intercompany accounts are eliminated on consolidation. */
   intercompany?: boolean;
+  /** A bank account (counts as cash & bank). */
+  bank?: boolean;
+  /** Created by the owner in Settings or from a dropdown. */
+  custom?: boolean;
 };
 
 export type JournalLine = { account: string; debit: number; credit: number };
@@ -317,6 +321,17 @@ export type Settings = {
   /** Notification types that should also be emailed (delivery needs the backend mailer). */
   emailAlerts: string[];
   alertEmail: string;
+  /** Branding, editable in System Settings. Images are stored as data URLs. */
+  brandName: string;
+  brandTagline: string;
+  logoDataUrl: string;
+  faviconDataUrl: string;
+  heroTitle: string;
+  heroText: string;
+  /** Extra dropdown options created on demand, keyed by list id (e.g. "documents.category"). */
+  customOptions: Record<string, string[]>;
+  /** Extra ledger accounts (income / expense categories, bank accounts). */
+  customAccounts: Account[];
 };
 
 export type AppState = {

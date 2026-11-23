@@ -215,7 +215,7 @@ export type CashFlow = { operating: number; investing: number; financing: number
 /** Ledger accounts that hold bank balances (multiple bank accounts per company). */
 export const BANK_CODES = ["1200", "1210", "1220"];
 
-const CASH = new Set(["1100", ...BANK_CODES]);
+const isCash = (code: string) => code === "1100" || BANK_CODES.includes(code);
 const INVESTING = new Set(["1500"]);
 const FINANCING = new Set(["3100", "2400", "1300", "2300"]);
 
@@ -226,10 +226,10 @@ export function cashFlow(entries: JournalEntry[]): CashFlow {
   let financing = 0;
   for (const e of entries) {
     const delta = e.lines
-      .filter((l) => CASH.has(l.account))
+      .filter((l) => isCash(l.account))
       .reduce((s, l) => s + l.debit - l.credit, 0);
     if (delta === 0) continue;
-    const others = e.lines.filter((l) => !CASH.has(l.account)).map((l) => l.account);
+    const others = e.lines.filter((l) => !isCash(l.account)).map((l) => l.account);
     if (others.some((a) => INVESTING.has(a))) investing += delta;
     else if (others.some((a) => FINANCING.has(a))) financing += delta;
     else operating += delta;
@@ -371,4 +371,51 @@ export function monthlySeries(
     );
     return { month, income: pl.totalIncome, expenses: pl.totalExpenses, profit: pl.netProfit };
   });
+}
+
+/* ---------- Custom accounts (created on demand) ---------- */
+
+const customCodes = new Set<string>();
+
+/**
+ * Sync owner-created accounts into the chart. The chart arrays are shared module state, so this
+ * replaces the previously registered custom accounts and keeps the built-in ones untouched.
+ */
+export function registerCustomAccounts(list: Account[]): void {
+  const drop = (arr: { code: string }[]) => {
+    for (let i = arr.length - 1; i >= 0; i--)
+      if (customCodes.has(arr[i]?.code ?? "")) arr.splice(i, 1);
+  };
+  drop(CHART);
+  drop(INCOME_ACCOUNTS);
+  drop(EXPENSE_ACCOUNTS);
+  for (let i = BANK_CODES.length - 1; i >= 0; i--)
+    if (customCodes.has(BANK_CODES[i] ?? "")) BANK_CODES.splice(i, 1);
+  for (const code of customCodes) delete ACCOUNT_BY_CODE[code];
+  customCodes.clear();
+
+  for (const a of list) {
+    if (ACCOUNT_BY_CODE[a.code]) continue; // never shadow a built-in account
+    const acc: Account = { ...a, custom: true };
+    customCodes.add(a.code);
+    ACCOUNT_BY_CODE[a.code] = acc;
+    CHART.push(acc);
+    if (acc.type === "income") INCOME_ACCOUNTS.push(acc);
+    if (acc.type === "expense") EXPENSE_ACCOUNTS.push(acc);
+    if (acc.bank) BANK_CODES.push(acc.code);
+  }
+  CHART.sort((x, y) => x.code.localeCompare(y.code));
+  INCOME_ACCOUNTS.sort((x, y) => x.code.localeCompare(y.code));
+  EXPENSE_ACCOUNTS.sort((x, y) => x.code.localeCompare(y.code));
+  BANK_CODES.sort();
+}
+
+export type NewAccountKind = "income" | "expense" | "bank";
+
+/** Next free code: income 4700-4899, expense 6000-6999, bank 1230-1299. */
+export function nextAccountCode(kind: NewAccountKind): string | null {
+  const [from, to] =
+    kind === "income" ? [4700, 4899] : kind === "expense" ? [6000, 6999] : [1230, 1299];
+  for (let n = from; n <= to; n++) if (!ACCOUNT_BY_CODE[String(n)]) return String(n);
+  return null;
 }

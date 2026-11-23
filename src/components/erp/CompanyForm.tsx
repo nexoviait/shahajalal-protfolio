@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { OptionSelect } from "@/components/erp/OptionSelect";
+import { useListOptions } from "@/components/erp/useListOptions";
 import { companies, useERP } from "@/lib/erp/store";
 import { COMPANY_STATUSES, type Company } from "@/lib/erp/types";
 
@@ -97,6 +99,8 @@ export function CompanyForm({
   company?: Company | undefined;
 }) {
   const state = useERP();
+  const existingCategories = [...new Set(state.companies.map((c) => c.category).filter(Boolean))];
+  const categories = useListOptions("companies.category", existingCategories);
   const [draft, setDraft] = useState<Omit<Company, "id">>(company ? { ...company } : EMPTY);
   const [error, setError] = useState("");
 
@@ -116,19 +120,29 @@ export function CompanyForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-3xl">
+        <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{company ? "Edit company profile" : "Add company"}</DialogTitle>
           <DialogDescription>
             Legal ownership and group reporting are configured independently, so a company can be
             reported under the group without being legally owned by a parent.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
           {TEXT_FIELDS.map((f) => (
             <div key={f.key} className={f.wide ? "grid gap-1.5 sm:col-span-2" : "grid gap-1.5"}>
               <Label htmlFor={`c-${f.key}`}>{f.label}</Label>
-              {f.area ? (
+              {f.key === "category" ? (
+                <OptionSelect
+                  id="c-category"
+                  value={draft.category}
+                  onChange={(v) => set("category", v)}
+                  options={categories.options}
+                  onCreate={categories.onCreate}
+                  noun="business category"
+                  placeholder="Select category"
+                />
+              ) : f.area ? (
                 <Textarea
                   id={`c-${f.key}`}
                   rows={2}
@@ -219,7 +233,7 @@ export function CompanyForm({
             </p>
           ) : null}
         </div>
-        <DialogFooter>
+        <DialogFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

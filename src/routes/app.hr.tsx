@@ -33,6 +33,7 @@ const FIELDS: FieldDef[] = [
   { key: "basicSalary", label: "Basic salary", type: "money", required: true },
   {
     key: "status",
+    extensible: false,
     label: "Employment status",
     type: "select",
     options: ["Active", "On Leave", "Resigned", "Terminated"],

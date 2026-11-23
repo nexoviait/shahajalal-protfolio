@@ -386,3 +386,92 @@ describe("AI business intelligence", () => {
     expect(unknown.supported).toBe(false);
   });
 });
+
+describe("branding settings", () => {
+  beforeEach(() => {
+    system._replace(buildSeed(REF));
+  });
+
+  it("validates uploaded images by type and size", async () => {
+    const { validateImage, LOGO_LIMITS, FAVICON_LIMITS } = await import("@/lib/erp/image");
+    expect(validateImage({ type: "image/png", size: 10_000 }, LOGO_LIMITS.maxBytes)).toBeNull();
+    expect(
+      validateImage({ type: "image/svg+xml", size: 2_000 }, FAVICON_LIMITS.maxBytes),
+    ).toBeNull();
+    expect(validateImage({ type: "application/pdf", size: 10 }, LOGO_LIMITS.maxBytes)).toMatch(
+      /PNG/,
+    );
+    expect(validateImage({ type: "image/png", size: 5_000_000 }, LOGO_LIMITS.maxBytes)).toMatch(
+      /too large/,
+    );
+  });
+
+  it("stores brand settings and keeps the audit log compact", () => {
+    ui.setSettings({ brandName: "Acme Group" });
+    ui.setSettings({ logoDataUrl: `data:image/png;base64,${"A".repeat(5000)}` });
+    const s = getState();
+    expect(s.settings.brandName).toBe("Acme Group");
+    expect(s.settings.logoDataUrl.length).toBeGreaterThan(5000);
+    const latest = s.audit[0];
+    expect(latest?.action).toBe("Settings");
+    expect(latest?.detail.length).toBeLessThan(400);
+    // Rapid edits collapse into one audit entry.
+    expect(s.audit.filter((a) => a.action === "Settings")).toHaveLength(1);
+  });
+});
+
+describe("dropdowns created on demand", () => {
+  beforeEach(() => {
+    system._replace(buildSeed(REF));
+  });
+
+  it("adds options once, case-insensitively, and removes them", () => {
+    expect(ui.addOption("documents.category", "Board Resolutions", ["Contracts"]).ok).toBe(true);
+    expect(ui.addOption("documents.category", "board resolutions", ["Contracts"]).ok).toBe(false);
+    expect(ui.addOption("documents.category", "contracts", ["Contracts"]).ok).toBe(false);
+    expect(ui.addOption("documents.category", "   ", []).ok).toBe(false);
+    expect(getState().settings.customOptions["documents.category"]).toEqual(["Board Resolutions"]);
+    expect(ui.removeOption("documents.category", "Board Resolutions").ok).toBe(true);
+    expect(getState().settings.customOptions["documents.category"]).toBeUndefined();
+  });
+
+  it("creates real ledger accounts that post, report and survive removal checks", () => {
+    const cat = ui.addAccount("income", "Consulting Fees");
+    expect(cat.ok).toBe(true);
+    const code = cat.ok ? (cat.id as string) : "";
+    expect(code).toMatch(/^47\d\d$/);
+    const bank = ui.addAccount("bank", "City Bank Ltd");
+    expect(bank.ok).toBe(true);
+    const bankCode = bank.ok ? (bank.id as string) : "";
+    expect(bankCode).toMatch(/^12[3-9]\d$/);
+    expect(ui.addAccount("income", "consulting fees").ok).toBe(false);
+
+    const res = ledger.recordTransaction({
+      companyId: "nexovia-it",
+      date: "2026-11-20",
+      kind: "income",
+      account: code,
+      amount: 7000,
+      mode: "bank",
+      memo: "Advisory",
+      bank: bankCode,
+    });
+    expect(res.ok).toBe(true);
+    const entries = getState().journal.filter(
+      (e) => e.companyId === "nexovia-it" && e.date === "2026-11-20",
+    );
+    expect(profitAndLoss(entries).income.find((r) => r.code === code)?.amount).toBe(7000);
+    expect(balanceSheet(getState().journal).balanced).toBe(true);
+    expect(cashFlow(entries).operating).toBe(7000);
+    expect(ui.removeAccount(code).ok).toBe(false); // has ledger entries
+    expect(ui.removeAccount(bankCode).ok).toBe(false);
+  });
+
+  it("removes an unused custom account and restores the built-in chart", () => {
+    const r = ui.addAccount("expense", "Training");
+    const code = r.ok ? (r.id as string) : "";
+    expect(code).toMatch(/^6\d\d\d$/);
+    expect(ui.removeAccount(code).ok).toBe(true);
+    expect(getState().settings.customAccounts).toHaveLength(0);
+  });
+});

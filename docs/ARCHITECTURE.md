@@ -67,6 +67,21 @@ This build keeps data in the browser (`localStorage`) so the whole product can b
 
 `companies`, `company_relationships (legal_parent_id, reporting_parent_id)`, `profiles`, `user_company_roles`, `journal_entries`, `journal_lines`, `daily_reports`, `assets`, `employees`, `payroll_runs`, `documents`, `land_records`, `projects`, `investments`, `ventures`, `tasks`, `approvals`, `approval_steps`, `audit_log`, `settings`. Every business table has `company_id` and is protected by RLS.
 
+## Responsive design standards
+
+Verified in headless Edge at 320, 360, 768, 1024 and 1280 px across all 24 routes, plus the mobile menu, dropdowns, search and form dialogs.
+
+| Rule | Implementation |
+|---|---|
+| Mobile first, breakpoints `sm` 640 · `md` 768 · `lg` 1024 · `xl` 1280 | Tailwind defaults |
+| No horizontal page scroll at any width | Grid children use `min-w-0`; wide tables sit in `overflow-x-auto` wrappers; scroll containers are `position: relative` so hidden text cannot widen the page (`styles.css`) |
+| Navigation | Fixed sidebar from `lg`; slide-in drawer below, including the user switcher |
+| Header | Row 1: menu, brand, actions. Row 2 (below `lg`): company and date filters in two columns |
+| Forms and dialogs | Single column on phones, two from `sm`; header and buttons stay fixed while fields scroll; max height 90vh |
+| Tabs and long controls | Tab lists scroll horizontally instead of wrapping; manual journal lines stack |
+| Numbers | Tile values use a smaller size on phones and never push the layout wider |
+| Motion | GSAP animations respect `prefers-reduced-motion` |
+
 ## Quality gates
 
 ```sh

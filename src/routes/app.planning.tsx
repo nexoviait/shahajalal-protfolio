@@ -42,6 +42,7 @@ const FIELDS: FieldDef[] = [
   { key: "category", label: "Business category" },
   {
     key: "stage",
+    extensible: false,
     label: "Development stage",
     type: "select",
     options: STAGES,

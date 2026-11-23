@@ -42,6 +42,7 @@ const FIELDS: FieldDef[] = [
   { key: "expenses", label: "Today's expenses", type: "money" },
   {
     key: "status",
+    extensible: false,
     label: "Status",
     type: "select",
     options: ["Submitted", "Approved", "Correction Requested"],

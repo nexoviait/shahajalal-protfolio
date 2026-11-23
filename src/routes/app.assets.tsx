@@ -54,6 +54,7 @@ const FIELDS: FieldDef[] = [
   { key: "purchasePrice", label: "Purchase price", type: "money", required: true },
   {
     key: "status",
+    extensible: false,
     label: "Status",
     type: "select",
     options: ["In Use", "Under Maintenance", "Transferred", "Impaired", "Disposed"],
@@ -66,6 +67,7 @@ const FIELDS: FieldDef[] = [
   { key: "usefulLifeYears", label: "Useful life (years)", type: "number", table: false },
   {
     key: "method",
+    extensible: false,
     label: "Depreciation method",
     type: "select",
     options: DEP_METHODS,

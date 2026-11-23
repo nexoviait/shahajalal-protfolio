@@ -25,6 +25,7 @@ const FIELDS: FieldDef[] = [
   { key: "monthlyTarget", label: "Monthly target", type: "money" },
   {
     key: "reportingFrequency",
+    extensible: false,
     label: "Reporting frequency",
     type: "select",
     options: ["Daily", "Weekly", "Monthly"],

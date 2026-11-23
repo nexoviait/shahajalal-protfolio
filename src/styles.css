@@ -154,6 +154,18 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    /* Slim, theme-aware scrollbars (standard properties; Chrome 121+, Firefox, Safari 18.2+). */
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 55%, transparent) transparent;
+  }
+
+  /*
+   * Scroll containers must be positioned so absolutely-positioned children (e.g. .sr-only text
+   * inside table cells) are clipped with them instead of widening the whole page.
+   */
+  .overflow-x-auto,
+  .overflow-auto {
+    position: relative;
   }
 
   body {

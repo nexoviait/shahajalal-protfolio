@@ -32,7 +32,7 @@ const KINDS = [
 ];
 
 const FIELDS: FieldDef[] = [
-  { key: "kind", label: "Type", type: "select", options: KINDS, required: true },
+  { key: "kind", extensible: false, label: "Type", type: "select", options: KINDS, required: true },
   { key: "title", label: "Title", required: true },
   { key: "amount", label: "Amount", type: "money" },
   { key: "date", label: "Date", type: "date", defaultValue: isoDate(new Date()) },
