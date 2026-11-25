@@ -30,6 +30,7 @@ import { assetPurchaseEntry, payrollEntry, pendingDepreciation } from "./ledger-
 import { DEFAULT_SETTINGS, buildSeed, STATE_VERSION } from "./seed";
 import { canEdit, MODULE_IDS, type ModuleId } from "./rbac";
 import { isoDate, uid } from "./format";
+import { addPeriod, outstanding } from "./register";
 
 const STORAGE_KEY = "sgos:state:v1";
 
@@ -51,6 +52,8 @@ const EMPTY: AppState = {
     approvals: [],
     users: [],
     personal: [],
+    register: [],
+    registerTxns: [],
   },
   audit: [],
   settings: DEFAULT_SETTINGS,
@@ -108,8 +111,18 @@ export function hydrate() {
     if (raw) {
       const parsed = JSON.parse(raw) as AppState;
       // Merge defaults so settings added in newer versions exist on older saved data.
-      if (parsed.version === STATE_VERSION)
+      if (parsed.version === STATE_VERSION) {
         next = { ...parsed, settings: { ...DEFAULT_SETTINGS, ...parsed.settings } };
+        // Collections added in newer versions: start from the demo data instead of empty.
+        if (!parsed.collections.register || !parsed.collections.registerTxns) {
+          const seed = buildSeed(new Date());
+          next.collections = {
+            ...next.collections,
+            register: parsed.collections.register ?? seed.collections.register,
+            registerTxns: parsed.collections.registerTxns ?? seed.collections.registerTxns,
+          };
+        }
+      }
     }
   } catch {
     next = null;
@@ -563,6 +576,8 @@ const COLLECTION_MODULE: Record<CollectionName, ModuleId> = {
   approvals: "approvals",
   users: "users",
   personal: "personal",
+  register: "register",
+  registerTxns: "register",
 };
 
 export const data = {
@@ -608,6 +623,10 @@ export const data = {
     if (!row) return fail("Record not found.");
     if (collection === "approvals" && row.status === "Approved")
       return fail("Approved records cannot be deleted.");
+    if (collection === "register" && state.collections.registerTxns.some((t) => t.itemId === id))
+      return fail("This account has transactions. Mark it as Closed instead of deleting it.");
+    if (collection === "registerTxns")
+      return fail("Register transactions are permanent. Void the transaction instead.");
     if (
       collection === "assets" &&
       state.journal.some((e) => e.source?.endsWith(`:${id}`) || e.source?.startsWith(`dep:${id}:`))
@@ -683,6 +702,111 @@ export const data = {
     return { ok: true };
   },
 };
+
+/* --------------------------- Financial register ------------------------- */
+
+export const financeRegister = {
+  /**
+   * Record a settlement (payment made/received) or an increase (new borrowing, charge, further
+   * lending) against a register account. Settlements move the next due date forward and close
+   * the account when the balance reaches zero.
+   */
+  addTxn(input: {
+    itemId: string;
+    txnType: "Increase" | "Settlement";
+    amount: number;
+    date: string;
+    notes?: string;
+  }): Result {
+    const denied = guard("register");
+    if (denied) return denied;
+    const item = state.collections.register.find((r) => r.id === input.itemId);
+    if (!item) return fail("Choose an account.");
+    if (item.status === "Closed") return fail("This account is closed.");
+    if (!(input.amount > 0)) return fail("Amount must be greater than zero.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return fail("Enter a valid date.");
+    const balance = outstandingOf(item);
+    if (input.txnType === "Settlement" && input.amount > balance + 0.005)
+      return fail(
+        `The amount is more than the outstanding balance of ${balance.toLocaleString("en-BD")}.`,
+      );
+
+    const txn: Row = {
+      id: uid("rtx"),
+      itemId: item.id,
+      date: input.date,
+      amount: input.amount,
+      txnType: input.txnType,
+      status: "Posted",
+      notes: input.notes ?? "",
+      submittedBy: String(currentUser().name),
+    };
+    let updated: Row = item;
+    if (input.txnType === "Settlement") {
+      const left = Math.round((balance - input.amount) * 100) / 100;
+      if (left <= 0) updated = { ...item, status: "Closed", nextDueDate: "" };
+      else if (item.nextDueDate && item.frequency !== "One-time") {
+        // One instalment is cleared for each full instalment paid (at least one for any payment
+        // when no instalment amount is set).
+        const inst = Number(item.installmentAmount) || 0;
+        const steps = inst > 0 ? Math.floor(input.amount / inst) : 1;
+        let due = String(item.nextDueDate);
+        for (let i = 0; i < steps; i++) due = addPeriod(due, item.frequency);
+        updated = { ...item, nextDueDate: due };
+      }
+    }
+    set(
+      withAudit(
+        {
+          ...state,
+          collections: {
+            ...state.collections,
+            registerTxns: [...state.collections.registerTxns, txn],
+            register: state.collections.register.map((r) => (r.id === item.id ? updated : r)),
+          },
+        },
+        audit(input.txnType, "register", `${item.title}: ${input.amount}`),
+      ),
+    );
+    return { ok: true, id: txn.id };
+  },
+
+  /** Void a transaction (kept for the audit trail, excluded from balances). */
+  voidTxn(id: string, reason: string): Result {
+    const denied = guard("register");
+    if (denied) return denied;
+    const txn = state.collections.registerTxns.find((t) => t.id === id);
+    if (!txn) return fail("Transaction not found.");
+    if (txn.status === "Voided") return fail("Already voided.");
+    if (!reason.trim()) return fail("A reason is required to void a transaction.");
+    const item = state.collections.register.find((r) => r.id === txn.itemId);
+    set(
+      withAudit(
+        {
+          ...state,
+          collections: {
+            ...state.collections,
+            registerTxns: state.collections.registerTxns.map((t) =>
+              t.id === id
+                ? { ...t, status: "Voided", notes: `${t.notes ?? ""} [Voided: ${reason}]`.trim() }
+                : t,
+            ),
+            // Re-open an account that a now-voided payment had closed.
+            register: state.collections.register.map((r) =>
+              r.id === txn.itemId && r.status === "Closed" ? { ...r, status: "Active" } : r,
+            ),
+          },
+        },
+        audit("Void transaction", "register", `${item?.title ?? txn.itemId}: ${reason}`),
+      ),
+    );
+    return { ok: true };
+  },
+};
+
+function outstandingOf(item: Row): number {
+  return outstanding(item, state.collections.registerTxns);
+}
 
 /* ------------------------------ Maintenance ---------------------------- */
 

@@ -21,6 +21,7 @@ export type ModuleId =
   | "reports"
   | "notifications"
   | "personal"
+  | "register"
   | "users"
   | "settings";
 
@@ -47,6 +48,7 @@ const ALL: ModuleId[] = [
   "reports",
   "notifications",
   "personal",
+  "register",
   "users",
   "settings",
 ];
@@ -64,6 +66,7 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, Access>> = {
   "Group Administrator": grant(
     {
       personal: "none",
+      register: "none",
       settings: "edit",
       users: "edit",
       ai: "view",

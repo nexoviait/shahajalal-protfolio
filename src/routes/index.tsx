@@ -120,7 +120,7 @@ const STEPS = [
 ];
 
 const STATS: { value: number; suffix: string; label: string }[] = [
-  { value: 22, suffix: "", label: "Integrated modules" },
+  { value: 23, suffix: "", label: "Integrated modules" },
   { value: 50, suffix: "+", label: "Companies supported" },
   { value: 9, suffix: "", label: "Companies in the portfolio" },
   { value: 100, suffix: "%", label: "Figures from the ledger" },

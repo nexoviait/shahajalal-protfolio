@@ -282,6 +282,17 @@ export const ROW_KEYS = [
   "version",
   "currentValuation",
   "warranty",
+  "scope",
+  "party",
+  "openingAmount",
+  "nextDueDate",
+  "installmentAmount",
+  "frequency",
+  "creditLimit",
+  "interestRate",
+  "itemId",
+  "txnType",
+  "partyAlias",
 ] as const;
 
 export type RowKey = (typeof ROW_KEYS)[number];
@@ -304,7 +315,9 @@ export type CollectionName =
   | "tasks"
   | "approvals"
   | "users"
-  | "personal";
+  | "personal"
+  | "register"
+  | "registerTxns";
 
 export type Collections = Record<CollectionName, Row[]>;
 

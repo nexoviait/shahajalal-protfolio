@@ -26,6 +26,10 @@ Status key: ✅ implemented and tested · 🟡 partly implemented (gap stated) �
 | 19 | Notifications (12 types), in-app and email | `/app/notifications`, Settings | 🟡 | In-app live; email preferences are saved but delivery needs a mailer. |
 | 20 | Roles, company assignment, unique login, 2FA, login history | `/app/users`, `rbac.ts` | 🟡 | Permission matrix and company scoping enforced in the UI and store. Real authentication, 2FA, password reset and login history are ⛔. The top-bar user switcher is a demo stand-in for sign-in. |
 | 21 | Personal owner profile, separate from company books | `/app/personal` | ✅ | Stored in a separate collection; never posts to a ledger. |
+| 30 | Owner Central Financial Register: scopes, loans, cards, payables/receivables, central reports | `/app/register`, `register.ts` | ✅ | Owner-only. Memorandum register, deliberately not posted to company ledgers. |
+| 30 | Due-date alerts (7 d, 3 d, due day, overdue) | `deriveNotifications` | 🟡 | In-app live; email delivery needs the mailer. |
+| 30 | Party statement | Register → Party statement | ✅ | |
+| 30 | AI financial assistant (draft → approve) | `assistant.ts` | 🟡 | Rule-based Bangla/English parser; matches accounts by name and the “Also known as” field. Needs a server-side LLM for free-form sentences. |
 | 22 | Group treasury | `/app/treasury` | ✅ | |
 | 23 | Independent / holding structures; legal vs reporting parent | `CompanyForm` | 🟡 | Both relationships are stored independently; consolidation currently treats the whole selected scope as one group. |
 | 24 | RBAC, audit log, no deletion of approved records, backup/export | Store, Settings | 🟡 | Audit log, reversal-only ledger, locked approvals, JSON backup/restore ✅. MFA, session management, encryption at rest, automated DB backups, DR ⛔. |

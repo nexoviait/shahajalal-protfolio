@@ -61,7 +61,7 @@ export type DataModuleProps = {
   fields: FieldDef[];
   noun: string;
   /** Rows belong to a company (default true). */
-  companyScoped?: boolean;
+  companyScoped?: boolean | "optional";
   /** Extra content above the table (summaries, charts). Receives the filtered rows. */
   summary?: (rows: Row[]) => ReactNode;
   /** Extra header actions. */
@@ -73,6 +73,12 @@ export type DataModuleProps = {
   /** Field that identifies a row in the table's first cell. */
   statusKey?: RowKey;
   canDelete?: (row: Row) => boolean;
+  /** Computed columns shown after the fields (not stored). */
+  extraColumns?: {
+    label: string;
+    render: (row: Row) => ReactNode;
+    export?: (row: Row) => string | number;
+  }[];
   /** Prepare a row just before saving (e.g. compute totals). */
   beforeSave?: (row: Row, isNew: boolean) => Row;
 };
@@ -127,7 +133,10 @@ export function DataModule(props: DataModuleProps) {
   const state = useERP();
   const role = currentRole(state);
   const editable = canEdit(role, props.module);
-  const companyScoped = props.companyScoped ?? true;
+  const companyMode = props.companyScoped ?? true;
+  const companyScoped = companyMode !== false;
+  /** "optional": rows may belong to a company or to none (personal / other). */
+  const companyRequired = companyMode === true;
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Row | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -153,7 +162,7 @@ export function DataModule(props: DataModuleProps) {
 
   const openNew = () => {
     const base: Row = { id: uid(props.collection.slice(0, 3)) };
-    if (companyScoped) {
+    if (companyRequired) {
       const preferred =
         state.activeCompanyId !== "all"
           ? state.activeCompanyId
@@ -183,7 +192,7 @@ export function DataModule(props: DataModuleProps) {
         return;
       }
     }
-    if (companyScoped && !editing.companyId) {
+    if (companyRequired && !editing.companyId) {
       setError("Select a company.");
       return;
     }
@@ -216,6 +225,7 @@ export function DataModule(props: DataModuleProps) {
     const out: Record<string, string | number | boolean | undefined> = {};
     if (companyScoped) out["Company"] = companyName(r.companyId);
     for (const f of props.fields) out[f.label] = r[f.key];
+    for (const c of props.extraColumns ?? []) if (c.export) out[c.label] = c.export(r);
     return out;
   });
 
@@ -265,6 +275,11 @@ export function DataModule(props: DataModuleProps) {
                       {f.label}
                     </th>
                   ))}
+                  {(props.extraColumns ?? []).map((c) => (
+                    <th key={c.label} className="px-3 py-2 font-medium">
+                      {c.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -299,6 +314,11 @@ export function DataModule(props: DataModuleProps) {
                         )}
                       </td>
                     ))}
+                    {(props.extraColumns ?? []).map((c) => (
+                      <td key={c.label} className="px-3 py-2">
+                        {c.render(r)}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -322,17 +342,25 @@ export function DataModule(props: DataModuleProps) {
           {editing ? (
             <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
               {companyScoped ? (
-                <div className="grid gap-1.5 sm:col-span-2">
+                <div className="grid min-w-0 grid-cols-1 gap-1.5 sm:col-span-2">
                   <Label>Company</Label>
                   <Select
-                    value={editing.companyId ?? ""}
-                    onValueChange={(v) => setEditing({ ...editing, companyId: v })}
-                    disabled={!editable || !isNew}
+                    value={editing.companyId || (companyRequired ? "" : "__none__")}
+                    onValueChange={(v) => {
+                      if (v === "__none__") {
+                        const { companyId: _drop, ...rest } = editing;
+                        setEditing(rest);
+                      } else setEditing({ ...editing, companyId: v });
+                    }}
+                    disabled={!editable || (companyRequired && !isNew)}
                   >
                     <SelectTrigger aria-label="Company">
                       <SelectValue placeholder="Select company" />
                     </SelectTrigger>
                     <SelectContent>
+                      {companyRequired ? null : (
+                        <SelectItem value="__none__">None (personal / other)</SelectItem>
+                      )}
                       {state.companies.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -355,7 +383,13 @@ export function DataModule(props: DataModuleProps) {
                 return (
                   <Fragment key={f.key}>
                     {heading}
-                    <div className={wide ? "grid gap-1.5 sm:col-span-2" : "grid gap-1.5"}>
+                    <div
+                      className={
+                        wide
+                          ? "grid min-w-0 grid-cols-1 gap-1.5 sm:col-span-2"
+                          : "grid min-w-0 grid-cols-1 gap-1.5"
+                      }
+                    >
                       <Label htmlFor={id}>
                         {f.label}
                         {f.required ? <span className="text-destructive"> *</span> : null}

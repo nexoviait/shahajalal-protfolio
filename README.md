@@ -4,7 +4,7 @@ Centralized business management and enterprise operating system: one owner, one 
 Built with [Lovable](https://lovable.dev) on TanStack Start, React 19, TypeScript, Tailwind CSS v4 and shadcn/ui.
 
 - **Landing page:** `/`
-- **Portal:** `/app` (22 modules, a workspace for every company)
+- **Portal:** `/app` (23 modules, a workspace for every company)
 
 ## Documentation
 
@@ -19,7 +19,7 @@ Built with [Lovable](https://lovable.dev) on TanStack Start, React 19, TypeScrip
 Master Dashboard · Company Portfolio · Daily Reports · Finance & Accounting · Group Treasury · Assets & Depreciation ·
 HR & Payroll · Management Team · Projects · Land & Properties · Investment & Shareholders · Business Planning ·
 Break-even Analysis · Documents · Tasks & Workflow · Approvals · AI Business Intelligence · Reports & Analytics ·
-Notifications · Personal Owner Profile · User Management · System Settings.
+Notifications · Personal Owner Profile · Financial Register · User Management · System Settings.
 
 ## Development
 

@@ -225,3 +225,24 @@ Suggested: Next.js/React/TypeScript/Tailwind; Python FastAPI or equivalent REST 
 ## 29. Final Development Instruction
 
 Build b Group as a complete, modular, secure, auditable and future-ready enterprise operating system. The Group Owner must manage a portfolio of companies without being physically present, with every company holding an accountable representative who updates daily operations, finances, management activity and performance.
+
+---
+
+## 30. Addendum — Owner Central Financial Register
+
+Added after the baseline. A central register of the owner's obligations and receivables across **Personal**, **Company** and **Other** scopes, kept separate from every company ledger.
+
+**Structure (OWNER CENTRAL DASHBOARD):** *Personal* (personal loans, credit cards, loans given, loans taken, personal receivables) · *Companies* (bBike Ltd., Bag E Rahmat Holdings, Best Health Diagnostic, other companies, investors and landowners) · *Other financial accounts* (other debts and liabilities, special credit facilities, other personal or institutional accounts).
+
+**Rules**
+1. Every record carries a mandatory **scope** (Personal / Company / Other), plus the company for company records, so a personal liability is never shown as a company liability.
+2. Account types: Loan Taken, Loan Given, Credit Card, Payable, Receivable. Balance = opening amount + increases − settlements.
+3. Transactions are permanent; a mistake is voided with a reason, never deleted. Accounts with history cannot be deleted, only closed.
+4. The register is **owner-only**.
+
+**Central reports:** Total Payable · Total Receivable · Net Position · Overdue · Loan Schedule · Credit Card Due.
+
+**Additional features**
+1. **Due-date alerts** — reminders 7 days before, 3 days before, on the due date, and when overdue (loans, credit cards, payables and receivables).
+2. **Party statement** — for one person or institution: total, settled and remaining, with the net position, in one click.
+3. **AI financial assistant** — the owner writes, for example, “আজ জমির মালিককে ৫ লাখ টাকা দিয়েছি।”; the assistant prepares a **draft** entry for the correct account; balances update only after the owner approves it. It never records anything on its own.

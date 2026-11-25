@@ -28,6 +28,7 @@ import { Route as AppNotificationsRouteImport } from './routes/app.notifications
 import { Route as AppPersonalRouteImport } from './routes/app.personal'
 import { Route as AppPlanningRouteImport } from './routes/app.planning'
 import { Route as AppProjectsRouteImport } from './routes/app.projects'
+import { Route as AppRegisterRouteImport } from './routes/app.register'
 import { Route as AppReportsRouteImport } from './routes/app.reports'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppTasksRouteImport } from './routes/app.tasks'
@@ -130,6 +131,11 @@ const AppProjectsRoute = AppProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRegisterRoute = AppRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/app/personal': typeof AppPersonalRoute
   '/app/planning': typeof AppPlanningRoute
   '/app/projects': typeof AppProjectsRoute
+  '/app/register': typeof AppRegisterRoute
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/tasks': typeof AppTasksRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/app/personal': typeof AppPersonalRoute
   '/app/planning': typeof AppPlanningRoute
   '/app/projects': typeof AppProjectsRoute
+  '/app/register': typeof AppRegisterRoute
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/tasks': typeof AppTasksRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/app/personal': typeof AppPersonalRoute
   '/app/planning': typeof AppPlanningRoute
   '/app/projects': typeof AppProjectsRoute
+  '/app/register': typeof AppRegisterRoute
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/tasks': typeof AppTasksRoute
@@ -263,6 +272,7 @@ export interface FileRouteTypes {
     | '/app/personal'
     | '/app/planning'
     | '/app/projects'
+    | '/app/register'
     | '/app/reports'
     | '/app/settings'
     | '/app/tasks'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/app/personal'
     | '/app/planning'
     | '/app/projects'
+    | '/app/register'
     | '/app/reports'
     | '/app/settings'
     | '/app/tasks'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/app/personal'
     | '/app/planning'
     | '/app/projects'
+    | '/app/register'
     | '/app/reports'
     | '/app/settings'
     | '/app/tasks'
@@ -465,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProjectsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/register': {
+      id: '/app/register'
+      path: '/register'
+      fullPath: '/app/register'
+      preLoaderRoute: typeof AppRegisterRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/reports': {
       id: '/app/reports'
       path: '/reports'
@@ -527,6 +546,7 @@ interface AppRouteChildren {
   AppPersonalRoute: typeof AppPersonalRoute
   AppPlanningRoute: typeof AppPlanningRoute
   AppProjectsRoute: typeof AppProjectsRoute
+  AppRegisterRoute: typeof AppRegisterRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTasksRoute: typeof AppTasksRoute
@@ -553,6 +573,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPersonalRoute: AppPersonalRoute,
   AppPlanningRoute: AppPlanningRoute,
   AppProjectsRoute: AppProjectsRoute,
+  AppRegisterRoute: AppRegisterRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTasksRoute: AppTasksRoute,

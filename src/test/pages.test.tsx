@@ -21,6 +21,7 @@ import { Route as CompaniesRoute } from "@/routes/app.companies";
 import { Route as DailyRoute } from "@/routes/app.daily";
 import { Route as FinanceRoute } from "@/routes/app.finance";
 import { Route as TreasuryRoute } from "@/routes/app.treasury";
+import { Route as RegisterRoute } from "@/routes/app.register";
 import { Route as AssetsRoute } from "@/routes/app.assets";
 import { Route as HrRoute } from "@/routes/app.hr";
 import { Route as ManagementRoute } from "@/routes/app.management";
@@ -46,6 +47,7 @@ const PAGES: Record<string, Page> = {
   "/app/daily": DailyRoute,
   "/app/finance": FinanceRoute,
   "/app/treasury": TreasuryRoute,
+  "/app/register": RegisterRoute,
   "/app/assets": AssetsRoute,
   "/app/hr": HrRoute,
   "/app/management": ManagementRoute,

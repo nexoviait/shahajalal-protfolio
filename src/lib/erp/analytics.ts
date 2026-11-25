@@ -1,4 +1,4 @@
-import type { AppState, Company, JournalEntry, Row } from "./types";
+import type { AppState, Role, Company, JournalEntry, Row } from "./types";
 import {
   accountBalance,
   balanceSheet,
@@ -10,6 +10,8 @@ import { grossSalary, toPayroll } from "./payroll";
 import { breakEven } from "./breakeven";
 import { inRange, periodRange, type Range } from "./period";
 import { dateParts, isoDate } from "./format";
+import { canView } from "./rbac";
+import { daysUntil, dueAmount, dueStage, outstanding, weOwe } from "./register";
 
 export function currentRange(state: AppState, now = new Date()): Range {
   return periodRange(state.period, now, { from: state.customFrom, to: state.customTo });
@@ -302,6 +304,37 @@ export function deriveNotifications(state: AppState, now = new Date()): Notice[]
         detail: `${Number(r.requiredInvestment).toLocaleString("en-BD")}`,
         companyId: r.companyId,
         link: "/app/daily",
+      });
+    }
+  }
+
+  // Financial register due dates: 7 days, 3 days, the due day, then overdue (owner-only data).
+  const viewer = state.collections.users.find((u) => u.id === state.currentUserId);
+  if (canView(String(viewer?.role ?? "Employee") as Role, "register")) {
+    for (const item of col.register) {
+      const bal = outstanding(item, col.registerTxns);
+      const stage = dueStage(item, bal, today);
+      if (stage === "none" || stage === "later") continue;
+      const owe = weOwe(item.kind);
+      const days = daysUntil(String(item.nextDueDate), today);
+      const when =
+        stage === "overdue"
+          ? `${Math.abs(days)} day(s) overdue`
+          : stage === "today"
+            ? "due today"
+            : `due in ${days} day(s)`;
+      out.push({
+        id: `due:${item.id}:${String(item.nextDueDate)}:${stage}`,
+        type: owe ? "Payment Due" : "Collection Due",
+        severity:
+          stage === "overdue" || stage === "today"
+            ? "critical"
+            : stage === "within3"
+              ? "warning"
+              : "info",
+        title: `${String(item.title)} ${when}`,
+        detail: `${String(item.party)} · ${dueAmount(item, bal).toLocaleString("en-BD")} (${String(item.scope)})`,
+        link: "/app/register",
       });
     }
   }

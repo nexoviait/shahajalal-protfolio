@@ -9,6 +9,7 @@ export const NAV: { id: ModuleId; to: string; en: string; bn: string }[] = [
   { id: "daily", to: "/app/daily", en: "Daily Reports", bn: "দৈনিক রিপোর্ট" },
   { id: "finance", to: "/app/finance", en: "Finance & Accounting", bn: "অর্থ ও হিসাব" },
   { id: "treasury", to: "/app/treasury", en: "Group Treasury", bn: "গ্রুপ ট্রেজারি" },
+  { id: "register", to: "/app/register", en: "Financial Register", bn: "আর্থিক রেজিস্টার" },
   { id: "assets", to: "/app/assets", en: "Assets & Depreciation", bn: "সম্পদ ও অবচয়" },
   { id: "hr", to: "/app/hr", en: "HR & Payroll", bn: "এইচআর ও বেতন" },
   { id: "management", to: "/app/management", en: "Management Team", bn: "ব্যবস্থাপনা দল" },

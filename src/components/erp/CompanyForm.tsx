@@ -130,7 +130,14 @@ export function CompanyForm({
         </DialogHeader>
         <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4 sm:grid-cols-2">
           {TEXT_FIELDS.map((f) => (
-            <div key={f.key} className={f.wide ? "grid gap-1.5 sm:col-span-2" : "grid gap-1.5"}>
+            <div
+              key={f.key}
+              className={
+                f.wide
+                  ? "grid min-w-0 grid-cols-1 gap-1.5 sm:col-span-2"
+                  : "grid min-w-0 grid-cols-1 gap-1.5"
+              }
+            >
               <Label htmlFor={`c-${f.key}`}>{f.label}</Label>
               {f.key === "category" ? (
                 <OptionSelect
@@ -160,7 +167,7 @@ export function CompanyForm({
             </div>
           ))}
           {NUM_FIELDS.map((f) => (
-            <div key={f.key} className="grid gap-1.5">
+            <div key={f.key} className="grid min-w-0 grid-cols-1 gap-1.5">
               <Label htmlFor={`c-${f.key}`}>{f.label}</Label>
               <Input
                 id={`c-${f.key}`}
@@ -171,7 +178,7 @@ export function CompanyForm({
               />
             </div>
           ))}
-          <div className="grid gap-1.5">
+          <div className="grid min-w-0 grid-cols-1 gap-1.5">
             <Label>Status</Label>
             <Select
               value={draft.status}
@@ -189,7 +196,7 @@ export function CompanyForm({
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
+          <div className="grid min-w-0 grid-cols-1 gap-1.5">
             <Label>Legal parent (ownership)</Label>
             <Select
               value={draft.legalParentId || "none"}
@@ -208,7 +215,7 @@ export function CompanyForm({
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
+          <div className="grid min-w-0 grid-cols-1 gap-1.5">
             <Label>Reporting parent</Label>
             <Select
               value={draft.reportingParentId || "none"}

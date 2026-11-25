@@ -40,6 +40,8 @@ const ALERT_TYPES = [
   "Low Cash Balance",
   "Unusual Expense",
   "Investment Required",
+  "Payment Due",
+  "Collection Due",
 ];
 
 function Settings() {
